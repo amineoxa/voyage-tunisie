@@ -28,8 +28,7 @@
         /* Hero Section */
         .hero {
             position: relative;
-            height: 60vh;
-            min-height: 400px;
+            height: 380px;
             background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://commons.wikimedia.org/wiki/Special:FilePath/Sidi%20Bou%20Said%20001.jpg');
             background-size: cover;
             background-position: center;
@@ -383,6 +382,20 @@
         // Watch for any changes in the body (images loading, etc.)
         const ro = new ResizeObserver(sendHeight);
         ro.observe(document.body);
+
+        // --- CROSS-FRAME SCROLL SYNC ---
+        document.querySelectorAll('.day-links a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href').substring(1);
+                const targetSection = document.getElementById(targetId);
+                if (targetSection) {
+                    // Send the relative Y position of the section to the Duda parent
+                    const relativeY = targetSection.offsetTop;
+                    window.parent.postMessage({ type: 'scroll-to', y: relativeY }, '*');
+                }
+            });
+        });
     </script>
 </body>
 </html>
