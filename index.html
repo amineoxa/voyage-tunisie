@@ -211,16 +211,43 @@
             flex-shrink: 0;
         }
 
-        /* Mobile Friendliness */
-        @media (max-width: 768px) {
+        /* Mobile & Narrow Layouts (Adaptive Navigation) */
+        @media (max-width: 850px) {
             .container {
                 flex-direction: column;
+                padding: 20px;
+                gap: 20px;
             }
             .sidebar {
-                display: none;
+                width: 100%;
+                position: sticky;
+                top: 0;
+                background: var(--bg-color);
+                z-index: 100;
+                padding: 15px 0;
+                border-bottom: 1px solid var(--grey-light);
+                margin-bottom: 10px;
+            }
+            .day-links {
+                display: flex;
+                gap: 20px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding: 5px 20px 10px 0;
+            }
+            .day-links::-webkit-scrollbar {
+                height: 4px;
+            }
+            .day-links::-webkit-scrollbar-thumb {
+                background: var(--grey-light);
+                border-radius: 10px;
+            }
+            .day-links li {
+                margin-bottom: 0;
+                white-space: nowrap;
             }
             .hero {
-                height: 40vh;
+                height: 300px;
                 border-radius: 0;
             }
             .activity-card {
@@ -228,7 +255,7 @@
             }
             .activity-image {
                 width: 100%;
-                height: 180px;
+                height: 200px;
             }
         }
     </style>
@@ -384,18 +411,44 @@
         ro.observe(document.body);
 
         // --- CROSS-FRAME SCROLL SYNC ---
-        document.querySelectorAll('.day-links a').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetId = link.getAttribute('href').substring(1);
-                const targetSection = document.getElementById(targetId);
-                if (targetSection) {
-                    // Send the relative Y position of the section to the Duda parent
-                    const relativeY = targetSection.offsetTop;
-                    window.parent.postMessage({ type: 'scroll-to', y: relativeY }, '*');
-                }
+        function initScrollSync() {
+            const links = document.querySelectorAll('.day-links a');
+            console.log("Nav sync initialized. Found links:", links.length);
+            
+            links.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = link.getAttribute('href').substring(1);
+                    const targetSection = document.getElementById(targetId);
+                    
+                    if (targetSection) {
+                        const relativeY = targetSection.getBoundingClientRect().top + window.pageYOffset;
+                        console.log("Link clicked:", targetId, "Sending Y:", relativeY);
+                        
+                        // Check if we are inside an iframe
+                        if (window.self !== window.top) {
+                            // We are in Duda, send the message to the parent
+                            const msg = { type: 'scroll-to', y: relativeY };
+                            window.parent.postMessage(msg, '*');
+                            if (window.top !== window.parent) window.top.postMessage(msg, '*');
+                        } else {
+                            // We are NOT in an iframe (testing locally), scroll directly
+                            window.scrollTo({
+                                top: relativeY - 40, // 40px margin
+                                behavior: 'smooth'
+                            });
+                        }
+                    }
+                });
             });
-        });
+        }
+        
+        // Run now if DOM ready, otherwise wait
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initScrollSync);
+        } else {
+            initScrollSync();
+        }
     </script>
 </body>
 </html>
