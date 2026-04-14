@@ -271,6 +271,9 @@
     </div>
 
     <div class="container">
+        <!-- Anchor for virtual sticky calculation -->
+        <div id="sidebar-anchor"></div>
+        
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <ul class="day-links">
@@ -369,15 +372,16 @@
     </div>
 
     <script>
-        // Simple scroll spy for active navigation
+        // LOCAL Scroll Spy (when viewing outside Duda)
         window.addEventListener('scroll', () => {
+            if (window.self !== window.top) return; // Prevent interference in Iframe
+            
             const sections = document.querySelectorAll('.day-section');
             const navLinks = document.querySelectorAll('.day-links a');
             
             let current = "";
             sections.forEach(section => {
                 const rect = section.getBoundingClientRect();
-                // Si le haut de la section est proche du haut de l'écran (avec marge pour les menus fixes)
                 if (rect.top <= 200) {
                     current = section.getAttribute('id');
                 }
@@ -395,6 +399,59 @@
         window.addEventListener('load', () => {
             if (window.scrollY < 100) {
                 document.querySelector('.day-links a')?.classList.add('active');
+            }
+        });
+
+        // --- VIRTUAL STICKY & SCROLL SPY VIA POSTMESSAGE (For Duda) ---
+        window.addEventListener('message', (e) => {
+            if (e.data.type === 'parent-scroll') {
+                const frameTop = e.data.frameTop; // e.g. -500 if user scrolled down 500px past iframe top
+                const offsetToHeader = e.data.offsetToHeader || 120; // Height of Duda header + margin
+                
+                const anchor = document.getElementById('sidebar-anchor');
+                const sidebar = document.querySelector('.sidebar');
+                
+                if (anchor && sidebar) {
+                    const naturalY = anchor.getBoundingClientRect().top; 
+                    const currentYInViewport = frameTop + naturalY;
+                    
+                    // 1. VIRTUAL STICKY LOGIC
+                    if (currentYInViewport < offsetToHeader) {
+                        const pushDown = offsetToHeader - currentYInViewport;
+                        
+                        // Prevent scrolling past the itinerary container
+                        const container = document.querySelector('.container');
+                        const containerBottom = container.getBoundingClientRect().bottom;
+                        const maxPushDown = containerBottom - naturalY - sidebar.offsetHeight - 50; 
+                        
+                        // Appliquer le style
+                        sidebar.style.transform = `translateY(${Math.max(0, Math.min(pushDown, maxPushDown))}px)`;
+                        sidebar.style.transition = "transform 0.1s ease-out"; // Rendu fluide
+                    } else {
+                        sidebar.style.transform = `translateY(0px)`;
+                    }
+
+                    // 2. REMOTE SCROLL SPY (For Day highlighting)
+                    const sections = document.querySelectorAll('.day-section');
+                    const navLinks = document.querySelectorAll('.day-links a');
+                    let current = "";
+                    
+                    sections.forEach(section => {
+                        const sectionYInViewport = frameTop + section.getBoundingClientRect().top;
+                        if (sectionYInViewport <= offsetToHeader + 150) {
+                            current = section.getAttribute('id');
+                        }
+                    });
+                    
+                    if (current) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href').includes(current)) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                }
             }
         });
 
