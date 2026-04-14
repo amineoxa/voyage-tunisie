@@ -68,7 +68,7 @@
         .sidebar {
             width: 150px;
             position: sticky;
-            top: 40px;
+            top: 20px;
             height: fit-content;
         }
 
@@ -376,9 +376,9 @@
             
             let current = "";
             sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                const sectionHeight = section.clientHeight;
-                if (window.scrollY >= sectionTop - 150) {
+                const rect = section.getBoundingClientRect();
+                // Si le haut de la section est proche du haut de l'écran (avec marge pour les menus fixes)
+                if (rect.top <= 200) {
                     current = section.getAttribute('id');
                 }
             });
@@ -423,18 +423,17 @@
                     
                     if (targetSection) {
                         const relativeY = targetSection.getBoundingClientRect().top + window.pageYOffset;
-                        console.log("Link clicked:", targetId, "Sending Y:", relativeY);
                         
                         // Check if we are inside an iframe
                         if (window.self !== window.top) {
-                            // We are in Duda, send the message to the parent
+                            // We are in an Iframe (Duda), send the message to the parent
                             const msg = { type: 'scroll-to', y: relativeY };
                             window.parent.postMessage(msg, '*');
                             if (window.top !== window.parent) window.top.postMessage(msg, '*');
                         } else {
                             // We are NOT in an iframe (testing locally), scroll directly
                             window.scrollTo({
-                                top: relativeY - 40, // 40px margin
+                                top: relativeY - 40,
                                 behavior: 'smooth'
                             });
                         }
